@@ -1,44 +1,73 @@
-﻿using Fizzler.Systems.HtmlAgilityPack;
-using HtmlAgilityPack;
+﻿using HtmlAgilityPack;
 using System;
-using System.Collections.Generic;
+using System.Data;
 using System.Linq;
-using System.Net;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Xml;
-using System.Xml.Linq;
 
 namespace JobSeekerNET4
 {
     class Program
     {
         const string uri = "http://www.vagas.com.br";
+        const string pathRepository = @"C:\Vagas\Vagas.xml";
 
-        public static List<ResumoVaga> ListaResumos { get; set; }
+        public static DataSet Repository { get; set; }
+        public static int VagasNovas { get; set; }
+        public static int VagasEncontradas { get; set; }
 
         static void Main(string[] args)
         {
-            ListaResumos = new List<ResumoVaga>();
-
             while (true)
             {
-                Executar();
+                try
+                {
+                    ConfigurarRepository();
 
-                Thread.Sleep(60000); // 60 segundos
+                    Executar();
+
+                    RedefinirContadores();
+
+                    Thread.Sleep(60000); // 60 segundos
+                }
+                catch
+                {
+                    Console.WriteLine("Erro ao consultar vagas. Tentando novamente em alguns minutos...");
+                    Console.WriteLine();
+
+                    Thread.Sleep(300000); // 5 minutos
+                }                
             }
+        }        
+
+        private static void ConfigurarRepository()
+        {
+            Repository = new DataSet();
+            Repository.ReadXml(pathRepository);            
         }
 
         private static void Executar()
-        {               
+        {
+            Console.WriteLine(DateTime.Now.ToString("dd/MM/yyyy HH:mm") + " - Verificando novas vagas...");
+
             var web = new HtmlWeb();
             var document = web.Load(uri + "/vagas-em-rio-de-janeiro?a%5B%5D=24&h%5B%5D=40&h%5B%5D=50&h%5B%5D=60");
-            var vagas = document.DocumentNode.SelectNodes("//section[@name='vagasAbertasHaUmaSemana']//article//header");
+            var vagas = document.DocumentNode.SelectNodes("//section[@class='grupoDeVagas']//article//header");
 
             foreach (var vaga in vagas)
                 AdicionarVaga(vaga);
+
+            Salvar();
+
+            Console.WriteLine("  -> Encontradas: " + VagasEncontradas);
+            Console.WriteLine("  -> Novas: " + VagasNovas);
+            Console.WriteLine("  -> Total: " + Repository.Tables["ResumoVaga"].AsEnumerable().Count());
+            Console.WriteLine();
+        }
+
+        private static void RedefinirContadores()
+        {
+            VagasEncontradas = 0;
+            VagasNovas = 0;
         }
 
         private static void AdicionarVaga(HtmlNode vaga)
@@ -54,8 +83,42 @@ namespace JobSeekerNET4
 
             var novoResumo = new ResumoVaga(idVaga, tituloVaga, urlVaga, nivelCargoEmpresa, nomeEmpresa);
 
-            if (novoResumo.IsValid() && !ListaResumos.Any(x => x.ObterID() == idVaga))
-                ListaResumos.Add(novoResumo);
+            var vagaExiste = VagaExiste(novoResumo);
+
+            if (novoResumo.IsValid() && !vagaExiste)
+            {
+                AdicionarXML(novoResumo);
+                VagasNovas++;
+            }
+
+            VagasEncontradas++;               
+        }
+
+        private static void AdicionarXML(ResumoVaga novoResumo)
+        {
+            var tabela = Repository.Tables["ResumoVaga"];
+
+            DataRow dr = tabela.NewRow();
+            dr["ID"] = novoResumo.ObterID();
+            dr["Titulo"] = novoResumo.ObterTitulo();
+            dr["URL"] = novoResumo.ObterURL();
+            dr["NivelCargo"] = novoResumo.ObterNivelCargo();
+            dr["Empresa"] = novoResumo.ObterEmpresa();
+            dr["DataCadastro"] = novoResumo.ObterDataCadastro();
+
+            tabela.Rows.Add(dr);            
+        }
+
+        private static bool VagaExiste(ResumoVaga novoResumo)
+        {
+            return Repository.Tables["ResumoVaga"]
+                .AsEnumerable()
+                .Any(x => x.Field<string>("ID") == novoResumo.ObterID());
+        }
+
+        private static void Salvar()
+        {
+            Repository.WriteXml(pathRepository);
         }
     }
 }

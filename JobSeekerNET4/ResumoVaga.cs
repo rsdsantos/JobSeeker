@@ -17,11 +17,11 @@ namespace JobSeekerNET4
 
         public ResumoVaga(string iD, string titulo, string uRL, string nivelCargo, string empresa)
         {
-            ID = iD;
-            Titulo = titulo;
-            URL = uRL;
-            NivelCargo = nivelCargo;
-            Empresa = empresa;
+            ID = iD.LimparConteudo();
+            Titulo = titulo.LimparConteudo();
+            URL = uRL.LimparConteudo();
+            NivelCargo = nivelCargo.LimparConteudo();
+            Empresa = empresa.LimparConteudo();
             DataCadastro = DateTime.Now;
         }
 
