@@ -49,9 +49,7 @@ namespace JobSeekerNET4
         }
 
         public void Executar()
-        {
-            Console.WriteLine(DateTime.Now.ToString("dd/MM/yyyy HH:mm") + " - Verificando novas vagas de "+ nomeSistema + "...");
-
+        {           
             var web = new HtmlWeb();
             var document = web.Load(uri + filtro);
             var vagas = document.DocumentNode.SelectNodes("//section[@class='grupoDeVagas']//article//header");
@@ -61,10 +59,14 @@ namespace JobSeekerNET4
 
             Salvar();
 
-            Console.WriteLine("  -> Encontradas: " + VagasEncontradas);
-            Console.WriteLine("  -> Novas: " + VagasNovas);
-            Console.WriteLine("  -> Total: " + Repository.Tables["ResumoVaga"].AsEnumerable().Count());
-            Console.WriteLine();
+            if (VagasNovas > 0)
+            {
+                Console.WriteLine(DateTime.Now.ToString("dd/MM/yyyy HH:mm") + " - Novas vagas de " + nomeSistema + " encontradas.");
+                Console.WriteLine("  -> Encontradas: " + VagasEncontradas);
+                Console.WriteLine("  -> Novas: " + VagasNovas);
+                Console.WriteLine("  -> Total: " + Repository.Tables["ResumoVaga"].AsEnumerable().Count());
+                Console.WriteLine();
+            }                  
 
             RedefinirContadores();
         }

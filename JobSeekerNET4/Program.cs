@@ -11,6 +11,8 @@ namespace JobSeekerNET4
     {
         static void Main(string[] args)
         {
+            Console.WriteLine(DateTime.Now.ToString("dd/MM/yyyy HH:mm") + " :: Monitoramento de vagas em andamento...");
+
             while (true)
             {
                 try
